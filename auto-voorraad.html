@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto Voorraad</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #111214;
+      --paper: #F6F5F2;
+      --card: #FFFFFF;
+      --accent: #D4420A;       /* Dutch-orange-red */
+      --accent-soft: #FBE9E2;
+      --steel: #5C6370;
+      --border: #E2E1DE;
+      --green: #1A7A4A;
+      --green-soft: #E2F5EB;
+      --yellow: #B07D00;
+      --yellow-soft: #FFF6DC;
+      --red: #C0392B;
+      --red-soft: #FDECEA;
+      --mono: 'DM Mono', monospace;
+      --sans: 'Inter', sans-serif;
+      --display: 'Syne', sans-serif;
+      --radius: 6px;
+      --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--ink);
+      color: #fff;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-logo {
+      font-family: var(--display);
+      font-weight: 800;
+      font-size: 20px;
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-logo span {
+      color: var(--accent);
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all .15s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: #b33808; }
+    .btn-ghost {
+      background: rgba(255,255,255,.1);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.15);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.18); }
+    .btn-outline {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { background: var(--border); }
+    .btn-danger {
+      background: var(--red-soft);
+      color: var(--red);
+      border: none;
+    }
+    .btn-danger:hover { background: #f8d7d4; }
+
+    /* LAYOUT */
+    .app { display: flex; height: calc(100vh - 56px); }
+
+    /* SIDEBAR / FILTERS */
+    aside {
+      width: 240px;
+      min-width: 240px;
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .filter-group label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--steel);
+      display: block;
+      margin-bottom: 6px;
+    }
+    .filter-group select,
+    .filter-group input[type=text] {
+      width: 100%;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--sans);
+      font-size: 13px;
+      background: var(--paper);
+      color: var(--ink);
+    }
+    .filter-group select:focus,
+    .filter-group input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+    .stats-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .stat-pill {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      font-size: 12px;
+    }
+    .stat-pill .num {
+      font-family: var(--mono);
+      font-weight: 500;
+      font-size: 15px;
+    }
+    .pill-total { background: var(--accent-soft); color: var(--accent); }
+    .pill-active { background: var(--green-soft); color: var(--green); }
+    .pill-sold { background: var(--border); color: var(--steel); }
+    .pill-reserved { background: var(--yellow-soft); color: var(--yellow); }
+
+    /* MAIN */
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .search-wrap {
+      flex: 1;
+      position: relative;
+    }
+    .search-wrap input {
+      width: 100%;
+      padding: 8px 12px 8px 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--sans);
+      font-size: 13px;
+      background: var(--card);
+    }
+    .search-wrap input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+    .search-icon {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--steel);
+      pointer-events: none;
+    }
+    .view-toggle {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .view-toggle button {
+      padding: 7px 11px;
+      border: none;
+      background: var(--card);
+      cursor: pointer;
+      color: var(--steel);
+      font-size: 14px;
+      transition: all .1s;
+    }
+    .view-toggle button.active {
+      background: var(--ink);
+      color: #fff;
+    }
+
+    /* CARDS GRID */
+    .cars-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .car-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: transform .15s, box-shadow .15s;
+      cursor: pointer;
+    }
+    .car-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    }
+    .car-img {
+      width: 100%;
+      height: 160px;
+      object-fit: cover;
+      background: var(--paper);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      color: var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+    .car-img img { width: 100%; height: 100%; object-fit: cover; }
+    .car-img-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #e8e7e4 0%, #d9d8d4 100%);
+      font-size: 52px;
+    }
+    .status-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .badge-te-koop { background: var(--green); color: #fff; }
+    .badge-gereserveerd { background: var(--yellow); color: #fff; }
+    .badge-verkocht { background: var(--steel); color: #fff; }
+
+    .car-body { padding: 14px 14px 10px; }
+    .car-title {
+      font-family: var(--display);
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 2px;
+    }
+    .car-subtitle {
+      font-size: 12px;
+      color: var(--steel);
+      margin-bottom: 10px;
+    }
+    .car-price {
+      font-family: var(--mono);
+      font-size: 20px;
+      font-weight: 500;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    .car-specs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px 8px;
+      font-size: 12px;
+      color: var(--steel);
+      margin-bottom: 12px;
+    }
+    .car-specs span { display: flex; align-items: center; gap: 4px; }
+    .car-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      border-top: 1px solid var(--border);
+    }
+    .kenteken {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      background: #FFED00;
+      color: #000;
+      padding: 2px 8px;
+      border-radius: 3px;
+      border: 1px solid #d4c300;
+      letter-spacing: .05em;
+    }
+    .card-actions { display: flex; gap: 6px; }
+    .icon-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      background: var(--paper);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      transition: background .1s;
+    }
+    .icon-btn:hover { background: var(--border); }
+
+    /* TABLE VIEW */
+    .cars-table-wrap { overflow-x: auto; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      font-size: 13px;
+    }
+    thead {
+      background: var(--ink);
+      color: #fff;
+    }
+    th {
+      padding: 11px 14px;
+      text-align: left;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafaf9; }
+    td .car-name-cell { font-weight: 600; font-size: 13px; }
+    td .car-variant { font-size: 11px; color: var(--steel); }
+
+    /* EMPTY STATE */
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 20px;
+      text-align: center;
+      color: var(--steel);
+    }
+    .empty-icon { font-size: 56px; margin-bottom: 16px; opacity: .5; }
+    .empty h3 { font-family: var(--display); font-size: 20px; margin-bottom: 8px; color: var(--ink); }
+    .empty p { font-size: 13px; max-width: 300px; margin-bottom: 20px; }
+
+    /* MODAL */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      backdrop-filter: blur(2px);
+    }
+    .modal {
+      background: var(--card);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0,0,0,.25);
+    }
+    .modal-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: var(--card);
+      z-index: 1;
+    }
+    .modal-header h2 {
+      font-family: var(--display);
+      font-size: 20px;
+      font-weight: 800;
+    }
+    .modal-body { padding: 24px; }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 22px;
+      cursor: pointer;
+      color: var(--steel);
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .close-btn:hover { background: var(--border); }
+
+    /* FORM */
+    .form-section {
+      margin-bottom: 24px;
+    }
+    .form-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--steel);
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .form-grid.cols-1 { grid-template-columns: 1fr; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--steel);
+    }
+    .field input,
+    .field select,
+    .field textarea {
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--sans);
+      font-size: 13px;
+      background: var(--paper);
+      color: var(--ink);
+      width: 100%;
+    }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      outline: 2px solid var(--accent);
+      border-color: transparent;
+    }
+    .field textarea { resize: vertical; min-height: 80px; }
+
+    .kenteken-input-wrap {
+      position: relative;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .kenteken-input-wrap input {
+      font-family: var(--mono);
+      font-size: 15px;
+      font-weight: 500;
+      background: #FFED00;
+      color: #000;
+      border: 2px solid #d4c300;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      flex: 1;
+    }
+    .kenteken-input-wrap input::placeholder { color: #888; letter-spacing: 0; }
+    .kenteken-lookup-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: var(--ink);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s;
+      flex-shrink: 0;
+    }
+    .kenteken-lookup-btn:hover { background: #2c2f35; }
+    .kenteken-lookup-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    .lookup-status {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+    }
+    .lookup-status.loading {
+      display: flex;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      color: var(--steel);
+    }
+    .lookup-status.success {
+      display: flex;
+      background: var(--green-soft);
+      border: 1px solid #a8dfc0;
+      color: var(--green);
+    }
+    .lookup-status.error {
+      display: flex;
+      background: var(--red-soft);
+      border: 1px solid #f0b8b4;
+      color: var(--red);
+    }
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      position: sticky;
+      bottom: 0;
+      background: var(--card);
+    }
+
+    /* NAP badge */
+    .nap-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 3px;
+    }
+    .nap-ok { background: var(--green-soft); color: var(--green); }
+    .nap-unknown { background: var(--border); color: var(--steel); }
+
+    /* APK badge */
+    .apk-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .apk-ok { color: var(--green); }
+    .apk-warn { color: var(--yellow); }
+    .apk-exp { color: var(--red); }
+
+    /* Photos area */
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+    }
+    .photo-thumb {
+      aspect-ratio: 4/3;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .photo-add {
+      aspect-ratio: 4/3;
+      border-radius: 4px;
+      border: 2px dashed var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--steel);
+      font-size: 11px;
+      gap: 4px;
+      transition: border-color .15s;
+    }
+    .photo-add:hover { border-color: var(--accent); color: var(--accent); }
+    .remove-photo {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      background: rgba(0,0,0,.6);
+      color: #fff;
+      border: none;
+      border-radius: 3px;
+      font-size: 12px;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .photo-thumb:hover .remove-photo { display: flex; }
+
+    .hidden { display: none !important; }
+    .count-badge {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 10px;
+      padding: 0 6px;
+      font-size: 11px;
+      font-weight: 600;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    /* DETAIL PANEL */
+    .detail-panel {
+      max-width: 720px;
+    }
+    .detail-photo {
+      width: 100%;
+      height: 220px;
+      background: var(--paper);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+    }
+    .detail-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .spec-table {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .spec-row {
+      background: var(--card);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .spec-row .key {
+      font-size: 11px;
+      color: var(--steel);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .spec-row .val {
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .detail-desc {
+      font-size: 13px;
+      color: var(--steel);
+      line-height: 1.7;
+      background: var(--paper);
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-grid.cols-3 { grid-template-columns: 1fr 1fr; }
+      aside { display: none; }
+      .cars-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-logo">🚗 <span>Auto</span>Voorraad
+  </div>
+  <div class="header-actions">
+    <span id="header-count" style="color:#aaa;font-size:13px"></span>
+    <button class="btn btn-primary" onclick="openAddModal()">+ Auto toevoegen</button>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside>
+    <div class="stats-row" id="stats-row">
+      <div class="stat-pill pill-total"><span>Totaal</span><span class="num" id="stat-total">0</span></div>
+      <div class="stat-pill pill-active"><span>Te koop</span><span class="num" id="stat-tekoop">0</span></div>
+      <div class="stat-pill pill-reserved"><span>Gereserveerd</span><span class="num" id="stat-reserved">0</span></div>
+      <div class="stat-pill pill-sold"><span>Verkocht</span><span class="num" id="stat-sold">0</span></div>
+    </div>
+
+    <div class="filter-group">
+      <label>Status</label>
+      <select id="filter-status" onchange="applyFilters()">
+        <option value="">Alle statussen</option>
+        <option value="Te koop">Te koop</option>
+        <option value="Gereserveerd">Gereserveerd</option>
+        <option value="Verkocht">Verkocht</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Brandstof</label>
+      <select id="filter-brandstof" onchange="applyFilters()">
+        <option value="">Alle brandstof</option>
+        <option value="Benzine">Benzine</option>
+        <option value="Diesel">Diesel</option>
+        <option value="Elektrisch">Elektrisch</option>
+        <option value="Hybride">Hybride</option>
+        <option value="LPG">LPG</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Transmissie</label>
+      <select id="filter-transmissie" onchange="applyFilters()">
+        <option value="">Alle</option>
+        <option value="Handgeschakeld">Handgeschakeld</option>
+        <option value="Automaat">Automaat</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Max. prijs (€)</label>
+      <input type="text" id="filter-price" placeholder="bv. 15000" oninput="applyFilters()" />
+    </div>
+    <div class="filter-group">
+      <label>Max. km-stand</label>
+      <input type="text" id="filter-km" placeholder="bv. 100000" oninput="applyFilters()" />
+    </div>
+    <button class="btn btn-outline" style="width:100%;font-size:12px;" onclick="resetFilters()">Filters wissen</button>
+  </aside>
+
+  <!-- Main -->
+  <main>
+    <div class="toolbar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Zoek op merk, model, kenteken…" oninput="applyFilters()" />
+      </div>
+      <div class="view-toggle">
+        <button id="btn-grid" class="active" title="Kaarten" onclick="setView('grid')">⊞</button>
+        <button id="btn-list" title="Lijst" onclick="setView('list')">☰</button>
+      </div>
+    </div>
+
+    <!-- Grid view -->
+    <div id="view-grid" class="cars-grid"></div>
+    <!-- List/table view -->
+    <div id="view-list" class="cars-table-wrap hidden">
+      <table>
+        <thead>
+          <tr>
+            <th>Auto</th>
+            <th>Kenteken</th>
+            <th>Bouwjaar</th>
+            <th>Km-stand</th>
+            <th>Brandstof</th>
+            <th>APK</th>
+            <th>Prijs</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="cars-tbody"></tbody>
+      </table>
+    </div>
+    <div id="empty-state" class="empty hidden">
+      <div class="empty-icon">🚘</div>
+      <h3>Nog geen auto's</h3>
+      <p>Voeg je eerste auto toe aan het voorraadsysteem.</p>
+      <button class="btn btn-primary" onclick="openAddModal()">+ Auto toevoegen</button>
+    </div>
+    <div id="no-results" class="empty hidden">
+      <div class="empty-icon">🔍</div>
+      <h3>Geen resultaten</h3>
+      <p>Probeer andere zoekwoorden of pas de filters aan.</p>
+    </div>
+  </main>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="overlay hidden" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal" id="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="modal-title">Auto toevoegen</h2>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- IDENTIFICATIE -->
+      <div class="form-section">
+        <div class="form-section-title">🔑 Identificatie</div>
+        <div class="form-grid cols-1" style="margin-bottom:12px;">
+          <div class="field">
+            <label>Kenteken</label>
+            <div class="kenteken-input-wrap">
+              <input type="text" id="f-kenteken" placeholder="AB-123-C" maxlength="9"
+                oninput="this.value=this.value.toUpperCase()"
+                onkeydown="if(event.key==='Enter'){event.preventDefault();lookupKenteken();}" />
+              <button type="button" class="kenteken-lookup-btn" id="lookup-btn" onclick="lookupKenteken()">
+                🔍 Opzoeken
+              </button>
+            </div>
+            <div class="lookup-status" id="lookup-status"></div>
+          </div>
+        <div class="form-grid cols-3">
+          <div class="field">
+            <label>Merk *</label>
+            <input type="text" id="f-merk" placeholder="bv. Volkswagen" list="merken-list" />
+            <datalist id="merken-list">
+              <option value="Audi"><option value="BMW"><option value="Citroën"><option value="Dacia">
+              <option value="Ferrari"><option value="Fiat"><option value="Ford"><option value="Honda">
+              <option value="Hyundai"><option value="Kia"><option value="Mazda"><option value="Mercedes-Benz">
+              <option value="Nissan"><option value="Opel"><option value="Peugeot"><option value="Renault">
+              <option value="Seat"><option value="Skoda"><option value="Suzuki"><option value="Tesla">
+              <option value="Toyota"><option value="Volkswagen"><option value="Volvo">
+            </datalist>
+          </div>
+          <div class="field">
+            <label>Model *</label>
+            <input type="text" id="f-model" placeholder="bv. Golf" />
+          </div>
+          <div class="field">
+            <label>Uitvoering</label>
+            <input type="text" id="f-uitvoering" placeholder="bv. 1.6 TDI Comfortline" />
+          </div>
+        </div>
+      </div>
+
+      <!-- VOERTUIGGEGEVENS -->
+      <div class="form-section">
+        <div class="form-section-title">📋 Voertuiggegevens</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Bouwjaar *</label>
+            <input type="number" id="f-bouwjaar" placeholder="bv. 2019" min="1950" max="2030" />
+          </div>
+          <div class="field">
+            <label>Km-stand *</label>
+            <input type="number" id="f-kmstand" placeholder="bv. 85000" min="0" />
+          </div>
+          <div class="field">
+            <label>Brandstof</label>
+            <select id="f-brandstof">
+              <option value="">Selecteer…</option>
+              <option>Benzine</option>
+              <option>Diesel</option>
+              <option>Elektrisch</option>
+              <option>Hybride</option>
+              <option>Plug-in Hybride</option>
+              <option>LPG</option>
+              <option>CNG</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Transmissie</label>
+            <select id="f-transmissie">
+              <option value="">Selecteer…</option>
+              <option>Handgeschakeld</option>
+              <option>Automaat</option>
+              <option>Semi-automaat</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Carrosserie</label>
+            <select id="f-carrosserie">
+              <option value="">Selecteer…</option>
+              <option>Hatchback</option>
+              <option>Sedan</option>
+              <option>Stationwagon</option>
+              <option>SUV / Crossover</option>
+              <option>Coupé</option>
+              <option>Cabriolet</option>
+              <option>MPV</option>
+              <option>Bestelauto</option>
+              <option>Pick-up</option>
+              <option>Oldtimer</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Kleur</label>
+            <input type="text" id="f-kleur" placeholder="bv. Zwart Metallic" />
+          </div>
+          <div class="field">
+            <label>Vermogen (pk)</label>
+            <input type="number" id="f-pk" placeholder="bv. 150" min="0" />
+          </div>
+          <div class="field">
+            <label>Aantal deuren</label>
+            <select id="f-deuren">
+              <option value="">–</option>
+              <option>2</option>
+              <option>3</option>
+              <option>4</option>
+              <option>5</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- APK & PAPIEREN -->
+      <div class="form-section">
+        <div class="form-section-title">📄 APK & Papieren</div>
+        <div class="form-grid cols-3">
+          <div class="field">
+            <label>APK vervaldatum</label>
+            <input type="date" id="f-apk" />
+          </div>
+          <div class="field">
+            <label>NAP</label>
+            <select id="f-nap">
+              <option value="">Onbekend</option>
+              <option value="Ja">Ja – logische stand</option>
+              <option value="Nee">Nee – niet logisch</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Aantal eigenaren</label>
+            <input type="number" id="f-eigenaren" placeholder="bv. 2" min="1" max="20" />
+          </div>
+          <div class="field">
+            <label>Eerste registratie NL</label>
+            <input type="date" id="f-registratie" />
+          </div>
+          <div class="field">
+            <label>Onderhoudsboekje</label>
+            <select id="f-boekje">
+              <option value="">Onbekend</option>
+              <option>Volledig aanwezig</option>
+              <option>Gedeeltelijk aanwezig</option>
+              <option>Niet aanwezig</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Reservesleutel</label>
+            <select id="f-sleutel">
+              <option value="">–</option>
+              <option>Ja</option>
+              <option>Nee</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- VERKOOP -->
+      <div class="form-section">
+        <div class="form-section-title">💰 Verkoop</div>
+        <div class="form-grid cols-3">
+          <div class="field">
+            <label>Vraagprijs (€) *</label>
+            <input type="number" id="f-prijs" placeholder="bv. 12500" min="0" />
+          </div>
+          <div class="field">
+            <label>Inkoopprijs (€)</label>
+            <input type="number" id="f-inkoop" placeholder="bv. 10000" min="0" />
+          </div>
+          <div class="field">
+            <label>Status</label>
+            <select id="f-status">
+              <option>Te koop</option>
+              <option>Gereserveerd</option>
+              <option>Verkocht</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- BESCHRIJVING & OPTIES -->
+      <div class="form-section">
+        <div class="form-section-title">📝 Beschrijving & Opties</div>
+        <div class="form-grid cols-1" style="margin-bottom:12px;">
+          <div class="field">
+            <label>Advertentietekst / omschrijving</label>
+            <textarea id="f-beschrijving" placeholder="Beschrijf de staat, bijzonderheden, recent onderhoud, opties…" rows="4"></textarea>
+          </div>
+        </div>
+        <div class="form-grid cols-1">
+          <div class="field">
+            <label>Opties / accessoires</label>
+            <input type="text" id="f-opties" placeholder="bv. Trekhaak, Navigatie, Stoelverwarming, PDC…" />
+          </div>
+        </div>
+      </div>
+
+      <!-- FOTO'S -->
+      <div class="form-section">
+        <div class="form-section-title">📷 Foto's (URL)</div>
+        <div class="form-grid cols-1" style="margin-bottom:10px;">
+          <div class="field">
+            <label>Foto-URL toevoegen</label>
+            <div style="display:flex;gap:6px;">
+              <input type="text" id="f-foto-url" placeholder="https://… (voeg foto-URL's toe)" style="flex:1" />
+              <button class="btn btn-outline" type="button" onclick="addPhotoUrl()">Toevoegen</button>
+            </div>
+          </div>
+        </div>
+        <div class="photos-grid" id="photos-preview"></div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Annuleren</button>
+      <button class="btn btn-primary" onclick="saveCar()">Opslaan</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="overlay hidden" id="detail-overlay" onclick="closeDetail()">
+  <div class="modal detail-panel" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 id="detail-title">–</h2>
+      <button class="close-btn" onclick="closeDetail()">×</button>
+    </div>
+    <div class="modal-body" id="detail-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="detail-delete-btn">🗑 Verwijderen</button>
+      <button class="btn btn-outline" onclick="closeDetail()">Sluiten</button>
+      <button class="btn btn-primary" id="detail-edit-btn">✏️ Bewerken</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let cars = JSON.parse(localStorage.getItem('autovOorraad') || '[]');
+let editingId = null;
+let currentView = 'grid';
+let currentPhotos = [];
+let detailCarId = null;
+
+// ── Persistence ───────────────────────────────────────────────────────────
+function save() {
+  localStorage.setItem('autovOorraad', JSON.stringify(cars));
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function fmtPrice(v) {
+  if (!v && v !== 0) return '–';
+  return '€\u202F' + Number(v).toLocaleString('nl-NL');
+}
+function fmtKm(v) {
+  if (!v && v !== 0) return '–';
+  return Number(v).toLocaleString('nl-NL') + ' km';
+}
+function fmtKenteken(k) {
+  return k ? k.toUpperCase() : '';
+}
+
+function apkStatus(dateStr) {
+  if (!dateStr) return { cls: 'apk-unknown', label: '–' };
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = (d - now) / 86400000;
+  if (diff < 0) return { cls: 'apk-exp', label: '⚠ Verlopen' };
+  if (diff < 60) return { cls: 'apk-warn', label: `⚡ ${Math.round(diff)}d` };
+  return { cls: 'apk-ok', label: `✓ ${d.toLocaleDateString('nl-NL')}` };
+}
+
+function statusBadgeClass(s) {
+  if (s === 'Te koop') return 'badge-te-koop';
+  if (s === 'Gereserveerd') return 'badge-gereserveerd';
+  return 'badge-verkocht';
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function getFiltered() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const fs = document.getElementById('filter-status').value;
+  const fb = document.getElementById('filter-brandstof').value;
+  const ft = document.getElementById('filter-transmissie').value;
+  const fp = parseFloat(document.getElementById('filter-price').value) || Infinity;
+  const fk = parseFloat(document.getElementById('filter-km').value) || Infinity;
+
+  return cars.filter(c => {
+    const text = `${c.merk} ${c.model} ${c.uitvoering} ${c.kenteken} ${c.kleur}`.toLowerCase();
+    if (q && !text.includes(q)) return false;
+    if (fs && c.status !== fs) return false;
+    if (fb && c.brandstof !== fb) return false;
+    if (ft && c.transmissie !== ft) return false;
+    if (c.prijs && c.prijs > fp) return false;
+    if (c.kmstand && c.kmstand > fk) return false;
+    return true;
+  });
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = cars.length;
+  document.getElementById('stat-tekoop').textContent = cars.filter(c => c.status === 'Te koop').length;
+  document.getElementById('stat-reserved').textContent = cars.filter(c => c.status === 'Gereserveerd').length;
+  document.getElementById('stat-sold').textContent = cars.filter(c => c.status === 'Verkocht').length;
+  document.getElementById('header-count').textContent = cars.length ? `${cars.length} auto${cars.length !== 1 ? "'s" : ""}` : '';
+}
+
+function render() {
+  updateStats();
+  const list = getFiltered();
+  const grid = document.getElementById('view-grid');
+  const tbody = document.getElementById('cars-tbody');
+  const empty = document.getElementById('empty-state');
+  const noRes = document.getElementById('no-results');
+
+  grid.innerHTML = '';
+  tbody.innerHTML = '';
+  empty.classList.add('hidden');
+  noRes.classList.add('hidden');
+
+  if (cars.length === 0) {
+    empty.classList.remove('hidden');
+    return;
+  }
+  if (list.length === 0) {
+    noRes.classList.remove('hidden');
+    return;
+  }
+
+  list.forEach(c => {
+    // Grid card
+    const apk = apkStatus(c.apk);
+    const imgHtml = c.photos && c.photos[0]
+      ? `<img src="${c.photos[0]}" alt="${c.merk} ${c.model}" onerror="this.parentElement.innerHTML='<div class=car-img-placeholder>🚗</div>'" />`
+      : `<div class="car-img-placeholder">🚗</div>`;
+
+    const card = document.createElement('div');
+    card.className = 'car-card';
+    card.innerHTML = `
+      <div class="car-img" style="position:relative">
+        ${imgHtml}
+        <span class="status-badge ${statusBadgeClass(c.status)}">${c.status}</span>
+      </div>
+      <div class="car-body">
+        <div class="car-title">${c.merk || ''} ${c.model || ''}</div>
+        <div class="car-subtitle">${c.uitvoering || ''}</div>
+        <div class="car-price">${fmtPrice(c.prijs)}</div>
+        <div class="car-specs">
+          <span>📅 ${c.bouwjaar || '–'}</span>
+          <span>🛣 ${fmtKm(c.kmstand)}</span>
+          <span>⛽ ${c.brandstof || '–'}</span>
+          <span>⚙️ ${c.transmissie || '–'}</span>
+          ${c.pk ? `<span>🏎 ${c.pk} pk</span>` : ''}
+          ${c.apk ? `<span class="${apk.cls}">APK ${apk.label}</span>` : ''}
+        </div>
+      </div>
+      <div class="car-footer">
+        <span class="kenteken">${fmtKenteken(c.kenteken) || 'Geen kenteken'}</span>
+        <div class="card-actions">
+          <button class="icon-btn" title="Bekijken" onclick="openDetail('${c.id}')">👁</button>
+          <button class="icon-btn" title="Bewerken" onclick="openEditModal('${c.id}')">✏️</button>
+          <button class="icon-btn" title="Verwijderen" onclick="deleteCar(event,'${c.id}')">🗑</button>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+
+    // Table row
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>
+        <div class="car-name-cell">${c.merk || ''} ${c.model || ''}</div>
+        <div class="car-variant">${c.uitvoering || ''}</div>
+      </td>
+      <td><span class="kenteken">${fmtKenteken(c.kenteken) || '–'}</span></td>
+      <td>${c.bouwjaar || '–'}</td>
+      <td style="font-family:var(--mono)">${fmtKm(c.kmstand)}</td>
+      <td>${c.brandstof || '–'}</td>
+      <td class="${apk.cls} apk-badge">${c.apk ? apk.label : '–'}</td>
+      <td style="font-family:var(--mono);font-weight:500;color:var(--accent)">${fmtPrice(c.prijs)}</td>
+      <td><span class="status-badge ${statusBadgeClass(c.status)}" style="position:static">${c.status}</span></td>
+      <td>
+        <div style="display:flex;gap:4px;">
+          <button class="icon-btn" onclick="openDetail('${c.id}')">👁</button>
+          <button class="icon-btn" onclick="openEditModal('${c.id}')">✏️</button>
+          <button class="icon-btn" onclick="deleteCar(event,'${c.id}')">🗑</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function applyFilters() { render(); }
+function resetFilters() {
+  document.getElementById('filter-status').value = '';
+  document.getElementById('filter-brandstof').value = '';
+  document.getElementById('filter-transmissie').value = '';
+  document.getElementById('filter-price').value = '';
+  document.getElementById('filter-km').value = '';
+  document.getElementById('search-input').value = '';
+  render();
+}
+
+function setView(v) {
+  currentView = v;
+  document.getElementById('view-grid').classList.toggle('hidden', v !== 'grid');
+  document.getElementById('view-list').classList.toggle('hidden', v !== 'list');
+  document.getElementById('btn-grid').classList.toggle('active', v === 'grid');
+  document.getElementById('btn-list').classList.toggle('active', v === 'list');
+}
+
+// ── CRUD ──────────────────────────────────────────────────────────────────
+function deleteCar(e, id) {
+  e.stopPropagation();
+  if (!confirm('Auto verwijderen?')) return;
+  cars = cars.filter(c => c.id !== id);
+  save();
+  render();
+  closeDetail();
+}
+
+function saveCar() {
+  const merk = document.getElementById('f-merk').value.trim();
+  const model = document.getElementById('f-model').value.trim();
+  if (!merk || !model) { alert('Vul tenminste merk en model in.'); return; }
+
+  const car = {
+    id: editingId || uid(),
+    kenteken: document.getElementById('f-kenteken').value.trim().toUpperCase(),
+    merk,
+    model,
+    uitvoering: document.getElementById('f-uitvoering').value.trim(),
+    bouwjaar: parseInt(document.getElementById('f-bouwjaar').value) || null,
+    kmstand: parseInt(document.getElementById('f-kmstand').value) || null,
+    brandstof: document.getElementById('f-brandstof').value,
+    transmissie: document.getElementById('f-transmissie').value,
+    carrosserie: document.getElementById('f-carrosserie').value,
+    kleur: document.getElementById('f-kleur').value.trim(),
+    pk: parseInt(document.getElementById('f-pk').value) || null,
+    deuren: document.getElementById('f-deuren').value,
+    apk: document.getElementById('f-apk').value,
+    nap: document.getElementById('f-nap').value,
+    eigenaren: parseInt(document.getElementById('f-eigenaren').value) || null,
+    registratie: document.getElementById('f-registratie').value,
+    boekje: document.getElementById('f-boekje').value,
+    sleutel: document.getElementById('f-sleutel').value,
+    prijs: parseInt(document.getElementById('f-prijs').value) || null,
+    inkoop: parseInt(document.getElementById('f-inkoop').value) || null,
+    status: document.getElementById('f-status').value,
+    beschrijving: document.getElementById('f-beschrijving').value.trim(),
+    opties: document.getElementById('f-opties').value.trim(),
+    photos: [...currentPhotos],
+  };
+
+  if (editingId) {
+    const idx = cars.findIndex(c => c.id === editingId);
+    if (idx !== -1) cars[idx] = car;
+  } else {
+    cars.unshift(car);
+  }
+
+  save();
+  render();
+  closeModal();
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────
+function openAddModal() {
+  editingId = null;
+  currentPhotos = [];
+  document.getElementById('modal-title').textContent = 'Auto toevoegen';
+  clearForm();
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function openEditModal(id) {
+  const c = cars.find(x => x.id === id);
+  if (!c) return;
+  editingId = id;
+  currentPhotos = c.photos ? [...c.photos] : [];
+  document.getElementById('modal-title').textContent = 'Auto bewerken';
+  fillForm(c);
+  renderPhotoPreviews();
+  document.getElementById('modal-overlay').classList.remove('hidden');
+  closeDetail();
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+  editingId = null;
+  currentPhotos = [];
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function clearForm() {
+  ['f-kenteken','f-merk','f-model','f-uitvoering','f-kleur','f-beschrijving','f-opties','f-foto-url','f-apk','f-registratie'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['f-bouwjaar','f-kmstand','f-pk','f-eigenaren','f-prijs','f-inkoop'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  ['f-brandstof','f-transmissie','f-carrosserie','f-deuren','f-nap','f-boekje','f-sleutel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('f-status').value = 'Te koop';
+  document.getElementById('photos-preview').innerHTML = '';
+}
+
+function fillForm(c) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('f-kenteken', c.kenteken); set('f-merk', c.merk); set('f-model', c.model);
+  set('f-uitvoering', c.uitvoering); set('f-bouwjaar', c.bouwjaar); set('f-kmstand', c.kmstand);
+  set('f-brandstof', c.brandstof); set('f-transmissie', c.transmissie); set('f-carrosserie', c.carrosserie);
+  set('f-kleur', c.kleur); set('f-pk', c.pk); set('f-deuren', c.deuren);
+  set('f-apk', c.apk); set('f-nap', c.nap); set('f-eigenaren', c.eigenaren);
+  set('f-registratie', c.registratie); set('f-boekje', c.boekje); set('f-sleutel', c.sleutel);
+  set('f-prijs', c.prijs); set('f-inkoop', c.inkoop); set('f-status', c.status);
+  set('f-beschrijving', c.beschrijving); set('f-opties', c.opties);
+}
+
+// ── Photos ────────────────────────────────────────────────────────────────
+function addPhotoUrl() {
+  const inp = document.getElementById('f-foto-url');
+  const url = inp.value.trim();
+  if (!url) return;
+  currentPhotos.push(url);
+  inp.value = '';
+  renderPhotoPreviews();
+}
+
+function removePhoto(idx) {
+  currentPhotos.splice(idx, 1);
+  renderPhotoPreviews();
+}
+
+function renderPhotoPreviews() {
+  const wrap = document.getElementById('photos-preview');
+  wrap.innerHTML = '';
+  currentPhotos.forEach((url, i) => {
+    const div = document.createElement('div');
+    div.className = 'photo-thumb';
+    div.innerHTML = `<img src="${url}" alt="Foto ${i+1}" onerror="this.src=''" /><button class="remove-photo" onclick="removePhoto(${i})">×</button>`;
+    wrap.appendChild(div);
+  });
+}
+
+// ── Detail Panel ──────────────────────────────────────────────────────────
+function openDetail(id) {
+  const c = cars.find(x => x.id === id);
+  if (!c) return;
+  detailCarId = id;
+  document.getElementById('detail-title').textContent = `${c.merk || ''} ${c.model || ''}`;
+
+  const apk = apkStatus(c.apk);
+  const margin = c.prijs && c.inkoop ? c.prijs - c.inkoop : null;
+
+  const photoHtml = c.photos && c.photos[0]
+    ? `<img src="${c.photos[0]}" alt="${c.merk} ${c.model}" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display='none'" />`
+    : `<span style="font-size:64px">🚗</span>`;
+
+  const specs = [
+    ['Kenteken', c.kenteken ? `<span class="kenteken">${fmtKenteken(c.kenteken)}</span>` : '–'],
+    ['Bouwjaar', c.bouwjaar || '–'],
+    ['Km-stand', fmtKm(c.kmstand)],
+    ['Brandstof', c.brandstof || '–'],
+    ['Transmissie', c.transmissie || '–'],
+    ['Carrosserie', c.carrosserie || '–'],
+    ['Kleur', c.kleur || '–'],
+    ['Vermogen', c.pk ? `${c.pk} pk` : '–'],
+    ['Deuren', c.deuren || '–'],
+    ['APK', c.apk ? `<span class="${apk.cls} apk-badge">${apk.label}</span>` : '–'],
+    ['NAP', c.nap === 'Ja' ? `<span class="nap-badge nap-ok">✓ Logisch</span>` : c.nap === 'Nee' ? `<span class="nap-badge" style="background:var(--red-soft);color:var(--red)">✗ Niet logisch</span>` : `<span class="nap-badge nap-unknown">Onbekend</span>`],
+    ['Eigenaren', c.eigenaren || '–'],
+    ['1e registratie NL', c.registratie ? new Date(c.registratie).toLocaleDateString('nl-NL') : '–'],
+    ['Onderhoudsboekje', c.boekje || '–'],
+    ['Reservesleutel', c.sleutel || '–'],
+    ['Vraagprijs', `<strong style="color:var(--accent)">${fmtPrice(c.prijs)}</strong>`],
+    ['Inkoopprijs', fmtPrice(c.inkoop)],
+    ['Marge', margin !== null ? `<strong style="color:var(--green)">${fmtPrice(margin)}</strong>` : '–'],
+    ['Status', `<span class="status-badge ${statusBadgeClass(c.status)}" style="position:static">${c.status}</span>`],
+  ];
+
+  const specHtml = specs.map(([k, v]) => `<div class="spec-row"><span class="key">${k}</span><span class="val">${v}</span></div>`).join('');
+
+  let extraPhotos = '';
+  if (c.photos && c.photos.length > 1) {
+    extraPhotos = `<div class="photos-grid" style="margin-bottom:16px;">` +
+      c.photos.slice(1).map(u => `<div class="photo-thumb"><img src="${u}" onerror="this.style.display='none'" /></div>`).join('') +
+      `</div>`;
+  }
+
+  document.getElementById('detail-body').innerHTML = `
+    <div class="detail-photo">${photoHtml}</div>
+    ${c.uitvoering ? `<div style="font-size:13px;color:var(--steel);margin-bottom:12px;">${c.uitvoering}</div>` : ''}
+    <div class="spec-table">${specHtml}</div>
+    ${c.opties ? `<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--steel);margin-bottom:6px;">Opties</div><div style="font-size:13px;">${c.opties}</div></div>` : ''}
+    ${c.beschrijving ? `<div class="detail-desc">${c.beschrijving}</div>` : ''}
+    ${extraPhotos}
+  `;
+
+  document.getElementById('detail-edit-btn').onclick = () => openEditModal(id);
+  document.getElementById('detail-delete-btn').onclick = (e) => deleteCar(e, id);
+  document.getElementById('detail-overlay').classList.remove('hidden');
+}
+
+function closeDetail() {
+  document.getElementById('detail-overlay').classList.add('hidden');
+}
+
+// ── Sidecode herkenning & normalisatie ────────────────────────────────────
+// Alle Nederlandse sidecodes voor personenauto's, bedrijfsauto's en motoren.
+// Elke regex matcht op de invoer zonder streepjes (hoofdletters).
+// Volgorde: meest specifiek eerst.
+const SIDECODES = [
+  // Sidecode 1:  XX-99-99
+  { code: 1, pattern: /^([A-Z]{2})(\d{2})(\d{2})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 2:  99-99-XX
+  { code: 2, pattern: /^(\d{2})(\d{2})([A-Z]{2})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 3:  99-XX-99
+  { code: 3, pattern: /^(\d{2})([A-Z]{2})(\d{2})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 4:  XX-99-XX
+  { code: 4, pattern: /^([A-Z]{2})(\d{2})([A-Z]{2})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 5:  XX-XX-99
+  { code: 5, pattern: /^([A-Z]{2})([A-Z]{2})(\d{2})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 6:  99-XX-XX
+  { code: 6, pattern: /^(\d{2})([A-Z]{2})([A-Z]{2})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 7:  99-XXX-9
+  { code: 7, pattern: /^(\d{2})([A-Z]{3})(\d{1})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 8:  9-XXX-99
+  { code: 8, pattern: /^(\d{1})([A-Z]{3})(\d{2})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 9:  XX-999-X
+  { code: 9, pattern: /^([A-Z]{2})(\d{3})([A-Z]{1})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 10: X-999-XX
+  { code: 10, pattern: /^([A-Z]{1})(\d{3})([A-Z]{2})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 11: XXX-99-X
+  { code: 11, pattern: /^([A-Z]{3})(\d{2})([A-Z]{1})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Sidecode 12: X-99-XXX (nieuw 2024, lichte bedrijfswagens / bijz. bromfietsen)
+  { code: 12, pattern: /^([A-Z]{1})(\d{2})([A-Z]{3})$/, fmt: (m) => `${m[1]}-${m[2]}-${m[3]}` },
+  // Aanhangwagen sidecode 4: XX-99-XX (zelfde als SC4, al gedekt)
+  // Oldtimer import: DZ-99-99 / PM-99-99 (gedekt door SC1/SC2)
+];
+
+/**
+ * Normaliseer een kenteken: strip streepjes/spaties, bepaal sidecode,
+ * geef { stripped, formatted, sidecode } terug of null als onbekend.
+ */
+function normalizeKenteken(input) {
+  const stripped = input.toUpperCase().replace(/[-\s]/g, '');
+  for (const sc of SIDECODES) {
+    const m = stripped.match(sc.pattern);
+    if (m) {
+      return {
+        stripped,
+        formatted: sc.fmt(m),
+        sidecode: sc.code
+      };
+    }
+  }
+  return null; // onbekend formaat
+}
+
+// ── Kenteken Lookup ───────────────────────────────────────────────────────
+async function lookupKenteken() {
+  const rawInput = document.getElementById('f-kenteken').value.trim().toUpperCase().replace(/\s/g, '');
+  if (!rawInput) { showLookupStatus('error', '⚠️ Voer eerst een kenteken in.'); return; }
+
+  // Sidecode detectie
+  const norm = normalizeKenteken(rawInput);
+  if (!norm) {
+    showLookupStatus('error', `⚠️ Onbekend kentekenformaat. Controleer de invoer (bv. AB-12-CD of KKF-86-F).`);
+    return;
+  }
+
+  // Schrijf het geformatteerde kenteken terug in het veld
+  document.getElementById('f-kenteken').value = norm.formatted;
+
+  const btn = document.getElementById('lookup-btn');
+  btn.disabled = true;
+  showLookupStatus('loading', `Sidecode ${norm.sidecode} herkend · RDW data ophalen voor ${norm.formatted}…`);
+
+  try {
+    // RDW API URLs
+    const url1 = `https://opendata.rdw.nl/resource/m9d7-ebf2.json?kenteken=${norm.stripped}`;
+    const url2 = `https://opendata.rdw.nl/resource/8ys7-d773.json?kenteken=${norm.stripped}`;
+
+    // Probeer achtereenvolgens: direct → corsproxy.io → allorigins
+    async function rdwFetch(url) {
+      const proxies = [
+        (u) => u,                                                              // Direct
+        (u) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,          // CORS proxy 1
+        (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`, // CORS proxy 2
+      ];
+      for (const makeUrl of proxies) {
+        try {
+          const r = await fetch(makeUrl(url), { signal: AbortSignal.timeout(8000) });
+          if (!r.ok) continue;
+          const json = await r.json();
+          return json;
+        } catch { continue; }
+      }
+      throw new Error('RDW API niet bereikbaar (direct én via proxy). Probeer het bestand te downloaden en lokaal te openen.');
+    }
+
+    showLookupStatus('loading', `Sidecode ${norm.sidecode} · RDW data ophalen voor ${norm.formatted}…`);
+
+    const [d1, d2] = await Promise.all([rdwFetch(url1), rdwFetch(url2)]);
+
+    const main = Array.isArray(d1) ? d1[0] : null;
+    const fuel = Array.isArray(d2) ? d2[0] : null;
+
+    if (!main) {
+      throw new Error(`Kenteken ${norm.formatted} (sidecode ${norm.sidecode}) niet gevonden in de RDW database. Controleer of het kenteken correct is.`);
+    }
+
+    // Parse RDW date format YYYYMMDD → YYYY-MM-DD
+    const rdwDate = (d) => {
+      if (!d) return null;
+      const s = String(d).replace(/\D/g, '');
+      if (s.length < 8) return null;
+      return `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`;
+    };
+
+    // Map brandstof
+    const brandstofMap = {
+      'benzine': 'Benzine',
+      'diesel': 'Diesel',
+      'elektriciteit': 'Elektrisch',
+      'lpg': 'LPG',
+      'cng': 'CNG',
+      'hybride (benzine/elektrisch)': 'Hybride',
+      'plug-in hybride (benzine)': 'Plug-in Hybride',
+      'plug-in hybride (diesel)': 'Plug-in Hybride',
+      'waterstof': 'Waterstof',
+    };
+    const rawBrandstof = (fuel?.brandstof_omschrijving || '').toLowerCase();
+    const brandstof = brandstofMap[rawBrandstof] || (fuel?.brandstof_omschrijving || null);
+
+    // kW → PK
+    const kw = parseFloat(main.nettomaximumvermogen);
+    const pk = isNaN(kw) ? null : Math.round(kw * 1.35962);
+
+    const info = {
+      merk:               main.merk || null,
+      model:              main.handelsbenaming || null,
+      bouwjaar:           main.datum_eerste_toelating ? parseInt(String(main.datum_eerste_toelating).slice(0,4)) : null,
+      brandstof,
+      carrosserie:        main.inrichting || null,
+      kleur:              main.eerste_kleur || null,
+      pk,
+      apk_vervaldatum:    rdwDate(main.vervaldatum_apk),
+      nap:                main.tellerstandoordeel === 'Logisch' ? 'Ja' : (main.tellerstandoordeel ? 'Nee' : null),
+      eerste_toelating_nl: rdwDate(main.datum_eerste_tenaamstelling_in_nederland),
+      eigenaren:          main.aantal_houders ? parseInt(main.aantal_houders) : null,
+      nieuwprijs:         main.catalogusprijs ? parseInt(main.catalogusprijs) : null,
+    };
+
+    // Fill in the form fields
+    const setVal = (id, val) => {
+      if (val === null || val === undefined || val === '') return;
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    };
+
+    if (info.merk) setVal('f-merk', info.merk.charAt(0).toUpperCase() + info.merk.slice(1).toLowerCase());
+    if (info.model) setVal('f-model', info.model);
+    if (info.bouwjaar) setVal('f-bouwjaar', info.bouwjaar);
+    if (info.brandstof) setVal('f-brandstof', info.brandstof);
+    if (info.carrosserie) setVal('f-carrosserie', mapCarrosserie(info.carrosserie));
+    if (info.kleur) setVal('f-kleur', info.kleur.charAt(0).toUpperCase() + info.kleur.slice(1).toLowerCase());
+    if (info.pk) setVal('f-pk', info.pk);
+    if (info.apk_vervaldatum) setVal('f-apk', info.apk_vervaldatum);
+    if (info.nap) setVal('f-nap', info.nap);
+    if (info.eerste_toelating_nl) setVal('f-registratie', info.eerste_toelating_nl);
+    if (info.eigenaren) setVal('f-eigenaren', info.eigenaren);
+
+    // Build summary of what was filled
+    const filled = [];
+    if (info.merk || info.model) filled.push(`${capitalize(info.merk||'')} ${capitalize(info.model||'')}`.trim());
+    if (info.bouwjaar) filled.push(info.bouwjaar);
+    if (info.brandstof) filled.push(info.brandstof);
+    if (info.pk) filled.push(`${info.pk} pk`);
+    if (info.apk_vervaldatum) filled.push(`APK tot ${new Date(info.apk_vervaldatum).toLocaleDateString('nl-NL')}`);
+
+    showLookupStatus('success', `✓ SC${norm.sidecode} · ${filled.join(' · ')}`);
+  } catch (err) {
+    console.error('Lookup fout:', err);
+    // Vervang newlines door spaties voor de status-balk
+    const msg = err.message.replace(/\n/g, ' · ');
+    showLookupStatus('error', `❌ ${msg}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function showLookupStatus(type, msg) {
+  const el = document.getElementById('lookup-status');
+  el.className = `lookup-status ${type}`;
+  el.style.display = 'flex';
+  if (type === 'loading') {
+    el.innerHTML = `<div class="spinner"></div> ${msg}`;
+  } else {
+    el.textContent = msg;
+  }
+}
+
+function capitalize(str) {
+  if (!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+function mapCarrosserie(raw) {
+  if (!raw) return '';
+  const r = raw.toLowerCase();
+  if (r.includes('hatchback')) return 'Hatchback';
+  if (r.includes('sedan')) return 'Sedan';
+  if (r.includes('station') || r.includes('wagon') || r.includes('estate') || r.includes('stationwagon')) return 'Stationwagon';
+  if (r.includes('suv') || r.includes('crossover') || r.includes('terrein')) return 'SUV / Crossover';
+  if (r.includes('coup')) return 'Coupé';
+  if (r.includes('cabrio') || r.includes('convertible') || r.includes('open')) return 'Cabriolet';
+  if (r.includes('mpv') || r.includes('minivan') || r.includes('people')) return 'MPV';
+  if (r.includes('bestel') || r.includes('van')) return 'Bestelauto';
+  if (r.includes('pick')) return 'Pick-up';
+  return capitalize(raw);
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
