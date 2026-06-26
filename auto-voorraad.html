@@ -854,6 +854,32 @@
             </div>
             <div class="lookup-status" id="lookup-status"></div>
           </div>
+        </div>
+
+        <!-- SCREENSHOT UPLOAD -->
+        <div class="form-grid cols-1" style="margin-bottom:12px;">
+          <div class="field">
+            <label>📸 Gegevens invullen via screenshot</label>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <label for="screenshot-input" style="
+                display:inline-flex;align-items:center;gap:6px;
+                padding:8px 14px;background:var(--ink);color:#fff;
+                border-radius:var(--radius);font-size:13px;font-weight:500;
+                cursor:pointer;white-space:nowrap;
+              ">
+                📷 Screenshot uploaden
+                <input type="file" id="screenshot-input" accept="image/*" style="display:none"
+                  onchange="handleScreenshot(this)" />
+              </label>
+              <span style="font-size:12px;color:var(--steel)">Maak een screenshot van voertuigcheck.com, RDW of een advertentie</span>
+            </div>
+            <div class="lookup-status" id="screenshot-status"></div>
+            <div id="screenshot-preview-wrap" style="margin-top:8px;display:none;">
+              <img id="screenshot-preview" style="max-width:100%;max-height:180px;border-radius:6px;border:1px solid var(--border);" />
+            </div>
+          </div>
+        </div>
+
         <div class="form-grid cols-3">
           <div class="field">
             <label>Merk *</label>
@@ -930,7 +956,26 @@
           </div>
           <div class="field">
             <label>Kleur</label>
-            <input type="text" id="f-kleur" placeholder="bv. Zwart Metallic" />
+            <div style="display:flex;gap:6px;align-items:center;">
+              <select id="f-kleur" style="flex:1" onchange="onKleurChange()">
+                <option value="">Selecteer kleur…</option>
+              </select>
+              <button type="button" id="kleur-load-btn" onclick="loadKleuren()"
+                style="padding:7px 10px;background:var(--ink);color:#fff;border:none;border-radius:var(--radius);font-size:12px;cursor:pointer;white-space:nowrap;flex-shrink:0;">
+                🎨 Kleuren ophalen
+              </button>
+            </div>
+            <div class="lookup-status" id="kleur-status"></div>
+            <!-- Auto foto preview -->
+            <div id="auto-foto-wrap" style="margin-top:10px;display:none;">
+              <div style="font-size:11px;color:var(--steel);font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;">Foto preview (linksvoorzijde)</div>
+              <div style="position:relative;border-radius:8px;overflow:hidden;background:var(--paper);border:1px solid var(--border);">
+                <img id="auto-foto-img" src="" alt=""
+                  style="width:100%;height:180px;object-fit:cover;display:block;"
+                  onerror="document.getElementById('auto-foto-wrap').style.display='none'" />
+                <div id="auto-foto-bron" style="position:absolute;bottom:6px;right:8px;font-size:10px;color:rgba(255,255,255,.8);background:rgba(0,0,0,.5);padding:2px 6px;border-radius:3px;"></div>
+              </div>
+            </div>
           </div>
           <div class="field">
             <label>Vermogen (pk)</label>
@@ -1337,7 +1382,7 @@ function handleOverlayClick(e) {
 }
 
 function clearForm() {
-  ['f-kenteken','f-merk','f-model','f-uitvoering','f-kleur','f-beschrijving','f-opties','f-foto-url','f-apk','f-registratie'].forEach(id => {
+  ['f-kenteken','f-merk','f-model','f-uitvoering','f-beschrijving','f-opties','f-foto-url','f-apk','f-registratie'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1349,6 +1394,11 @@ function clearForm() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  // Reset kleur dropdown
+  const kleurSel = document.getElementById('f-kleur');
+  kleurSel.innerHTML = '<option value="">Selecteer kleur…</option>';
+  document.getElementById('auto-foto-wrap').style.display = 'none';
+  document.getElementById('kleur-status').style.display = 'none';
   document.getElementById('f-status').value = 'Te koop';
   document.getElementById('photos-preview').innerHTML = '';
 }
@@ -1358,7 +1408,24 @@ function fillForm(c) {
   set('f-kenteken', c.kenteken); set('f-merk', c.merk); set('f-model', c.model);
   set('f-uitvoering', c.uitvoering); set('f-bouwjaar', c.bouwjaar); set('f-kmstand', c.kmstand);
   set('f-brandstof', c.brandstof); set('f-transmissie', c.transmissie); set('f-carrosserie', c.carrosserie);
-  set('f-kleur', c.kleur); set('f-pk', c.pk); set('f-deuren', c.deuren);
+  // Kleur: voeg toe als optie als het nog niet in de dropdown zit
+  if (c.kleur) {
+    const sel = document.getElementById('f-kleur');
+    let found = false;
+    for (const opt of sel.options) { if (opt.value === c.kleur) { found = true; break; } }
+    if (!found) {
+      const opt = document.createElement('option');
+      opt.value = c.kleur; opt.textContent = c.kleur;
+      sel.appendChild(opt);
+    }
+    sel.value = c.kleur;
+    // Toon opgeslagen foto als die er is
+    if (c.photos && c.photos[0]) {
+      document.getElementById('auto-foto-img').src = c.photos[0];
+      document.getElementById('auto-foto-wrap').style.display = 'block';
+    }
+  }
+  set('f-pk', c.pk); set('f-deuren', c.deuren);
   set('f-apk', c.apk); set('f-nap', c.nap); set('f-eigenaren', c.eigenaren);
   set('f-registratie', c.registratie); set('f-boekje', c.boekje); set('f-sleutel', c.sleutel);
   set('f-prijs', c.prijs); set('f-inkoop', c.inkoop); set('f-status', c.status);
@@ -1452,6 +1519,319 @@ function openDetail(id) {
 
 function closeDetail() {
   document.getElementById('detail-overlay').classList.add('hidden');
+}
+
+// ── Kleur & Foto ophalen ──────────────────────────────────────────────────
+async function loadKleuren() {
+  const merk = document.getElementById('f-merk').value.trim();
+  const model = document.getElementById('f-model').value.trim();
+  const bouwjaar = document.getElementById('f-bouwjaar').value.trim();
+
+  if (!merk || !model) {
+    showKleurStatus('error', '⚠️ Vul eerst merk en model in.');
+    return;
+  }
+
+  const btn = document.getElementById('kleur-load-btn');
+  btn.disabled = true;
+  showKleurStatus('loading', `Beschikbare kleuren ophalen voor ${merk} ${model}…`);
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{
+          role: 'user',
+          content: `Search for the official exterior color options for the ${bouwjaar ? bouwjaar + ' ' : ''}${merk} ${model}.
+Use the official ${merk} website or manufacturer press materials as source.
+Return ONLY a JSON array of color objects, no markdown:
+[
+  {"naam": "Obsidian Black Metallic", "code": "197", "type": "metallic"},
+  {"naam": "Polar White", "code": "149", "type": "uni"}
+]
+- naam: full Dutch or German/English color name as used by manufacturer
+- code: manufacturer color code if known, else null
+- type: "uni", "metallic", "parelmoer", or "speciale lak"
+Include all available colors. Return ONLY the JSON array.`
+        }]
+      })
+    });
+
+    if (!response.ok) throw new Error(`API fout ${response.status}`);
+    const data = await response.json();
+    const fullText = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const cleaned = fullText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const arrStart = cleaned.indexOf('[');
+    const arrEnd = cleaned.lastIndexOf(']');
+    if (arrStart === -1) throw new Error('Geen kleuren gevonden.');
+
+    const kleuren = JSON.parse(cleaned.substring(arrStart, arrEnd + 1));
+
+    // Vul dropdown
+    const select = document.getElementById('f-kleur');
+    const huidig = select.value;
+    select.innerHTML = '<option value="">Selecteer kleur…</option>';
+    kleuren.forEach(k => {
+      const opt = document.createElement('option');
+      opt.value = k.naam;
+      opt.textContent = `${k.naam}${k.type ? ' (' + k.type + ')' : ''}${k.code ? ' · ' + k.code : ''}`;
+      if (k.naam === huidig) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    showKleurStatus('success', `✓ ${kleuren.length} kleuren geladen voor ${merk} ${model}`);
+
+    // Als er al een kleur geselecteerd was, laad dan de foto
+    if (select.value) onKleurChange();
+
+  } catch (err) {
+    console.error(err);
+    showKleurStatus('error', `❌ ${err.message}`);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function onKleurChange() {
+  const merk = document.getElementById('f-merk').value.trim();
+  const model = document.getElementById('f-model').value.trim();
+  const kleur = document.getElementById('f-kleur').value;
+  const bouwjaar = document.getElementById('f-bouwjaar').value.trim();
+
+  if (!kleur || !merk || !model) return;
+
+  showKleurStatus('loading', `Foto zoeken voor ${merk} ${model} in ${kleur}…`);
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 800,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{
+          role: 'user',
+          content: `Find an official press photo or product image of the ${bouwjaar ? bouwjaar + ' ' : ''}${merk} ${model} in the color "${kleur}".
+Prefer images from:
+1. Official ${merk} manufacturer website (e.g. mercedes-benz.nl, volkswagen.nl, bmw.nl)
+2. Official press/media sites (e.g. media.mercedes-benz.com, media.vw.com)
+3. Autovisie, AutoWeek, or other reputable Dutch automotive press
+
+The image should show the car from the front-left angle (3/4 vooraanzicht links).
+Return ONLY this JSON object (no markdown):
+{
+  "foto_url": "https://...",
+  "bron_naam": "Mercedes-Benz Media",
+  "bron_url": "https://...",
+  "betrouwbaarheid": "hoog"
+}
+If no suitable image found, return {"foto_url": null, "bron_naam": null, "bron_url": null, "betrouwbaarheid": null}`
+        }]
+      })
+    });
+
+    if (!response.ok) throw new Error(`API fout ${response.status}`);
+    const data = await response.json();
+    const fullText = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const cleaned = fullText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start === -1) throw new Error('Geen foto gevonden.');
+
+    const result = JSON.parse(cleaned.substring(start, end + 1));
+
+    if (result.foto_url) {
+      const img = document.getElementById('auto-foto-img');
+      const wrap = document.getElementById('auto-foto-wrap');
+      const bron = document.getElementById('auto-foto-bron');
+      img.src = result.foto_url;
+      img.alt = `${merk} ${model} ${kleur}`;
+      bron.textContent = result.bron_naam || '';
+      wrap.style.display = 'block';
+
+      // Sla foto op in het huidige car-object
+      if (!currentPhotos.length) currentPhotos = [result.foto_url];
+      else currentPhotos[0] = result.foto_url;
+
+      showKleurStatus('success', `✓ Foto gevonden via ${result.bron_naam || 'onbekende bron'}`);
+    } else {
+      document.getElementById('auto-foto-wrap').style.display = 'none';
+      showKleurStatus('warn', `⚠ Geen officiële foto gevonden voor ${kleur}`);
+    }
+
+  } catch (err) {
+    console.error(err);
+    showKleurStatus('error', `❌ ${err.message}`);
+  }
+}
+
+function showKleurStatus(type, msg) {
+  const el = document.getElementById('kleur-status');
+  const classMap = { loading: 'loading', success: 'success', error: 'error', warn: 'loading' };
+  el.className = `lookup-status ${classMap[type] || type}`;
+  el.style.display = 'flex';
+  if (type === 'loading') {
+    el.innerHTML = `<div class="spinner"></div> ${msg}`;
+  } else {
+    el.textContent = msg;
+  }
+}
+
+// ── Screenshot uitleggen via Claude Vision ────────────────────────────────
+async function handleScreenshot(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  // Toon preview
+  const preview = document.getElementById('screenshot-preview');
+  const previewWrap = document.getElementById('screenshot-preview-wrap');
+  const objectUrl = URL.createObjectURL(file);
+  preview.src = objectUrl;
+  previewWrap.style.display = 'block';
+
+  showScreenshotStatus('loading', 'Screenshot wordt uitgelezen…');
+
+  try {
+    // Converteer afbeelding naar base64
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const mediaType = file.type || 'image/jpeg';
+
+    const prompt = `This is a screenshot of a Dutch vehicle information page (voertuigcheck.com, RDW, Marktplaats, AutoTrack, or similar). 
+Extract all visible vehicle data and return ONLY this JSON object (no markdown, no explanation):
+{
+  "kenteken": string or null,
+  "merk": string or null,
+  "model": string or null,
+  "uitvoering": string or null,
+  "bouwjaar": number or null,
+  "kmstand": number or null,
+  "brandstof": string or null,
+  "transmissie": string or null,
+  "carrosserie": string or null,
+  "kleur": string or null,
+  "pk": number or null,
+  "apk_vervaldatum": "YYYY-MM-DD" or null,
+  "nap": "Ja" or "Nee" or null,
+  "eerste_toelating_nl": "YYYY-MM-DD" or null,
+  "eigenaren": number or null,
+  "prijs": number or null,
+  "beschrijving": string or null,
+  "opties": string or null
+}
+
+Rules:
+- kenteken: Dutch license plate without dashes (e.g. N725HS), then format with dashes
+- brandstof: one of "Benzine", "Diesel", "Elektrisch", "Hybride", "Plug-in Hybride", "LPG"
+- transmissie: "Handgeschakeld" or "Automaat"
+- carrosserie: Dutch, e.g. "Hatchback", "Sedan", "Stationwagon", "SUV / Crossover", "MPV"
+- kleur: Dutch color with capital, e.g. "Zwart", "Wit", "Grijs", "Blauw"
+- prijs: asking price as number without currency symbol
+- nap: "Ja" if NAP/logische tellerstand mentioned positively
+- Return null for any field not visible in the screenshot`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mediaType, data: base64 }
+            },
+            { type: 'text', text: prompt }
+          ]
+        }]
+      })
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      throw new Error(`API fout ${response.status}: ${err.substring(0, 200)}`);
+    }
+
+    const data = await response.json();
+    const fullText = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+    const cleaned = fullText.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    const start = cleaned.indexOf('{');
+    const end = cleaned.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error('Geen gegevens herkend in de screenshot.');
+
+    const info = JSON.parse(cleaned.substring(start, end + 1));
+
+    // Vul velden in
+    const setVal = (id, val) => {
+      if (val === null || val === undefined || val === '') return;
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    };
+
+    if (info.kenteken) {
+      const norm = normalizeKenteken(info.kenteken.replace(/-/g, ''));
+      if (norm) setVal('f-kenteken', norm.formatted);
+      else setVal('f-kenteken', info.kenteken);
+    }
+    if (info.merk) setVal('f-merk', info.merk);
+    if (info.model) setVal('f-model', info.model);
+    if (info.uitvoering) setVal('f-uitvoering', info.uitvoering);
+    if (info.bouwjaar) setVal('f-bouwjaar', info.bouwjaar);
+    if (info.kmstand) setVal('f-kmstand', info.kmstand);
+    if (info.brandstof) setVal('f-brandstof', info.brandstof);
+    if (info.transmissie) setVal('f-transmissie', info.transmissie);
+    if (info.carrosserie) setVal('f-carrosserie', mapCarrosserie(info.carrosserie));
+    if (info.kleur) setVal('f-kleur', info.kleur);
+    if (info.pk) setVal('f-pk', Math.round(info.pk));
+    if (info.apk_vervaldatum) setVal('f-apk', info.apk_vervaldatum);
+    if (info.nap) setVal('f-nap', info.nap);
+    if (info.eerste_toelating_nl) setVal('f-registratie', info.eerste_toelating_nl);
+    if (info.eigenaren) setVal('f-eigenaren', info.eigenaren);
+    if (info.prijs) setVal('f-prijs', info.prijs);
+    if (info.beschrijving) setVal('f-beschrijving', info.beschrijving);
+    if (info.opties) setVal('f-opties', info.opties);
+
+    // Samenvatting
+    const filled = [];
+    if (info.merk || info.model) filled.push(`${info.merk||''} ${info.model||''}`.trim());
+    if (info.bouwjaar) filled.push(info.bouwjaar);
+    if (info.brandstof) filled.push(info.brandstof);
+    if (info.kmstand) filled.push(`${Number(info.kmstand).toLocaleString('nl-NL')} km`);
+    if (info.prijs) filled.push(`€${Number(info.prijs).toLocaleString('nl-NL')}`);
+
+    showScreenshotStatus('success', `✓ Ingevuld: ${filled.join(' · ')}`);
+
+    // Reset file input zodat dezelfde foto opnieuw geüpload kan worden
+    input.value = '';
+
+  } catch (err) {
+    console.error('Screenshot fout:', err);
+    showScreenshotStatus('error', `❌ ${err.message}`);
+    input.value = '';
+  }
+}
+
+function showScreenshotStatus(type, msg) {
+  const el = document.getElementById('screenshot-status');
+  el.className = `lookup-status ${type}`;
+  el.style.display = 'flex';
+  if (type === 'loading') {
+    el.innerHTML = `<div class="spinner"></div> ${msg}`;
+  } else {
+    el.textContent = msg;
+  }
 }
 
 // ── Sidecode herkenning & normalisatie ────────────────────────────────────
